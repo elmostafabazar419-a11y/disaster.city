@@ -1,0 +1,14 @@
+{
+  "name": "disaster-city-v1",
+  "version": "1.0.0",
+  "private": true,
+  "description": "DISASTER CITY multiplayer browser game",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "express": "^4.21.2",
+    "socket.io": "^4.8.1"
+  }
+}
