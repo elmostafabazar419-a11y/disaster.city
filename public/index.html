@@ -1,1 +1,47 @@
-
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>DISASTER CITY</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{color-scheme:dark;--bg:#0b1020;--panel:rgba(14,21,39,.94);--line:#2a3853;--cyan:#55dcff;--orange:#ffad55;--text:#f5f8ff;--muted:#a9b7cf}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--text)}canvas{display:block}button,input{font:inherit}button{cursor:pointer;border:1px solid #3a4b6a;background:#182642;color:white;border-radius:12px;padding:11px 14px;font-weight:800}button.primary{background:var(--cyan);color:#07111c;border-color:var(--cyan)}button:disabled{opacity:.45;cursor:not-allowed}input{width:100%;border:1px solid #33435f;background:#0b1428;color:white;padding:12px;border-radius:10px;outline:none}#game{position:fixed;inset:0}#hud{position:fixed;inset:0;pointer-events:none;display:none}#topbar{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between} .glass{background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(12px);box-shadow:0 8px 30px #0003}.pill{padding:9px 12px;font-size:12px;font-weight:800;letter-spacing:.04em}.status{max-width:55%;padding:10px 12px;font-size:12px;line-height:1.4}.status strong{color:var(--cyan)}#playerList{position:absolute;right:12px;top:66px;padding:12px;min-width:150px;max-width:210px;font-size:12px}#playerList h3{margin:0 0 8px;font-size:11px;color:var(--muted);letter-spacing:.12em}#players{display:grid;gap:6px}.player-row{display:flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:3px;flex:none}#bottom{position:absolute;bottom:14px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:end;gap:10px}#help{padding:10px 12px;font-size:11px;color:var(--muted);max-width:330px}#mobileControls{display:none;pointer-events:auto;gap:8px;align-items:end}#stick{width:116px;height:116px;border-radius:50%;background:#101c32b8;border:2px solid #a5bdd355;position:relative;touch-action:none}#knob{position:absolute;width:44px;height:44px;border-radius:50%;background:#55dcffbb;border:2px solid #d8f8ff;left:34px;top:34px}#jump{height:58px;width:66px;border-radius:50%;background:#ffad55;color:#201206}#lobby{position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:radial-gradient(ellipse at 50% 0%,#18365a 0%,#0b1020 65%);overflow:auto}.card{width:min(460px,100%);padding:24px;border:1px solid #304260;border-radius:22px;background:rgba(12,20,38,.96);box-shadow:0 25px 80px #0007}.eyebrow{color:var(--cyan);font-weight:900;letter-spacing:.2em;font-size:11px}.logo{font-size:clamp(34px,8vw,56px);line-height:.96;letter-spacing:-.06em;font-weight:900;margin:12px 0}.logo span{color:var(--orange)}.sub{color:var(--muted);font-size:13px;line-height:1.6}.field{display:grid;gap:6px;margin:14px 0}.field label{font-size:11px;font-weight:800;color:#b9c7dd;letter-spacing:.08em}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.divider{display:flex;align-items:center;gap:12px;color:#6f809c;font-size:10px;font-weight:900;margin:16px 0}.divider:before,.divider:after{content:"";height:1px;background:#2a3853;flex:1}#notice{min-height:20px;color:var(--orange);font-size:12px;margin-top:12px}#codeBadge{color:var(--orange)}#hint{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5}#leaveBtn{pointer-events:auto;padding:8px 10px;font-size:11px}#toast{position:absolute;top:80px;left:50%;transform:translateX(-50%);padding:10px 14px;max-width:85%;text-align:center;font-size:12px;display:none}#crosshair{position:absolute;left:50%;top:50%;width:7px;height:7px;border:1px solid #fff8;border-radius:50%;transform:translate(-50%,-50%)}@media(max-width:650px){#playerList{top:auto;bottom:145px;right:10px;min-width:125px;padding:9px}#bottom{bottom:10px;left:10px;right:10px;align-items:end}#help{max-width:48%;font-size:10px}#mobileControls{display:flex}#statusText{max-width:60%}.card{padding:20px}.status{max-width:62%}}@media(min-width:651px){#mobileControls{display:none}}
+</style>
+</head>
+<body>
+<div id="game"></div>
+<div id="lobby">
+  <main class="card">
+    <div class="eyebrow">MULTIPLAYER SURVIVAL • ONLINE</div>
+    <div class="logo">DISASTER<br><span>CITY</span></div>
+    <p class="sub">A blocky city. One huge tornado. Stay alive with your friends.</p>
+    <div class="field"><label for="playerName">PLAYER NAME</label><input id="playerName" maxlength="16" placeholder="Your name" autocomplete="nickname"></div>
+    <div class="actions"><button id="createBtn" class="primary">Create room</button><button id="soloBtn">Practice mode</button></div>
+    <div class="divider">OR JOIN A FRIEND</div>
+    <div class="field"><label for="roomCode">ROOM CODE</label><input id="roomCode" maxlength="5" placeholder="ABCDE" autocapitalize="characters"></div>
+    <button id="joinBtn" style="width:100%">Join room</button>
+    <div id="notice" role="status"></div>
+    <div id="hint">First test: open this page in two browsers/devices, create a room on one and join using the 5-character code on the other.</div>
+  </main>
+</div>
+<div id="hud">
+  <div id="topbar">
+    <div class="glass pill">DISASTER <span style="color:var(--orange)">CITY</span> · <span id="codeBadge">LOCAL</span></div>
+    <div class="glass status" id="statusText">Waiting for players…</div>
+    <button id="leaveBtn" class="glass">LEAVE</button>
+  </div>
+  <div id="playerList" class="glass"><h3>SURVIVORS</h3><div id="players"></div></div>
+  <div id="crosshair"></div>
+  <div id="toast" class="glass"></div>
+  <div id="bottom">
+    <div id="help" class="glass">WASD / arrows to move · Space to jump · Avoid the tornado!</div>
+    <div id="mobileControls"><div id="stick"><div id="knob"></div></div><button id="jump">JUMP</button></div>
+  </div>
+</div>
+<script src="/socket.io/socket.io.js"></script>
+<script type="module" src="/game.js"></script>
+</body>
+</html>
