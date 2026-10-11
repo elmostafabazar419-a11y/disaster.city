@@ -424,8 +424,16 @@ function showToast(msg) {
 }
 
 function setHudVisible(visible) {
-  if ($("hud")) $("hud").style.display = visible ? "block" : "none";
-  if ($("lobby")) $("lobby").style.display = visible ? "none" : "";
+  const hud = $("hud");
+  const lobby = $("lobby");
+
+  if (hud) {
+    hud.classList.toggle("hidden", !visible);
+  }
+
+  if (lobby) {
+    lobby.classList.toggle("hidden", visible);
+  }
 }
 
 function setText(id, text) {
@@ -500,11 +508,12 @@ function disposeCharacter(character) {
 
 function joined(code) {
   isPractice = false;
-  roomCode = code;
+  roomCode = String(code || "").toUpperCase();
 
   setHudVisible(true);
-  setText("codeBadge", code);
-  setText("roomInfo", "ROOM " + code);
+
+  setText("roomInfo", "ROOM CODE: " + roomCode);
+  setText("statusText", "Connected to room: " + roomCode);
 
   if (!localPlayer) {
     localPlayer = makeCharacter(0xff5b5b, getName());
@@ -515,7 +524,7 @@ function joined(code) {
   jumpVelocity = 0;
   onGround = true;
 
-  showToast("Room " + code + " connected.");
+  showToast("Room code: " + roomCode);
 }
 
 // SOCKET EVENTS
