@@ -13,6 +13,9 @@ let vehicles = [];
 let activeVehicle = null;
 let carSpeed = 0;
 let vehicleHud = null;
+let cameraYaw = 0, cameraPitch = 0.22, cameraDragging = false, cameraPointerId = null, cameraLastX = 0, cameraLastY = 0;
+const cameraTarget = new THREE.Vector3();
+const desiredCameraPosition = new THREE.Vector3();
 
 init3D();
 animate();
@@ -29,6 +32,24 @@ function init3D() {
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
   world.appendChild(renderer.domElement);
+  // Stable orbit camera: drag the scene to rotate (mouse or touch).
+  renderer.domElement.style.touchAction = "none";
+  renderer.domElement.addEventListener("pointerdown", e => {
+    if (e.button !== undefined && e.button !== 0) return;
+    cameraDragging = true; cameraPointerId = e.pointerId;
+    cameraLastX = e.clientX; cameraLastY = e.clientY;
+    renderer.domElement.setPointerCapture(e.pointerId);
+  });
+  renderer.domElement.addEventListener("pointermove", e => {
+    if (!cameraDragging || e.pointerId !== cameraPointerId) return;
+    const dx = e.clientX - cameraLastX, dy = e.clientY - cameraLastY;
+    cameraLastX = e.clientX; cameraLastY = e.clientY;
+    cameraYaw -= dx * 0.006;
+    cameraPitch = THREE.MathUtils.clamp(cameraPitch + dy * 0.004, -0.08, 0.72);
+  });
+  const stopCameraDrag = e => { if (e.pointerId === cameraPointerId) { cameraDragging = false; cameraPointerId = null; } };
+  renderer.domElement.addEventListener("pointerup", stopCameraDrag);
+  renderer.domElement.addEventListener("pointercancel", stopCameraDrag);
   clock = new THREE.Clock();
 
   scene.add(new THREE.HemisphereLight(0xdff4ff, 0x59604b, 2.0));
@@ -415,10 +436,19 @@ function animate(){
       const now=performance.now();if(!isPractice && roomCode && now-lastSend>70){socket.emit("playerMove",{x:localPlayer.position.x,z:localPlayer.position.z});lastSend=now;}
     }
     const focus=activeVehicle?activeVehicle.mesh:localPlayer;
-    const camOffset=activeVehicle?new THREE.Vector3(Math.sin(activeVehicle.rotation)*-9,5.8,Math.cos(activeVehicle.rotation)*-9):new THREE.Vector3(0,7.5,11);
-    const desiredCamera=new THREE.Vector3(focus.position.x+camOffset.x,focus.position.y+camOffset.y,focus.position.z+camOffset.z);
-    camera.position.lerp(desiredCamera,activeVehicle?0.09:0.12);
-    camera.lookAt(focus.position.x,focus.position.y+(activeVehicle?1.2:1.1),focus.position.z);
+    const distance = activeVehicle ? 10 : 9.5;
+    const yaw = cameraYaw + (activeVehicle ? -activeVehicle.rotation : 0);
+    const horizontal = Math.cos(cameraPitch) * distance;
+    desiredCameraPosition.set(
+      focus.position.x + Math.sin(yaw) * horizontal,
+      focus.position.y + (activeVehicle ? 2.4 : 1.0) + Math.sin(cameraPitch) * distance + 1.6,
+      focus.position.z + Math.cos(yaw) * horizontal
+    );
+    cameraTarget.set(focus.position.x, focus.position.y + (activeVehicle ? 1.25 : 1.05), focus.position.z);
+    // Frame-rate independent damping avoids the tiny position/rotation jumps that cause camera shake.
+    const smooth = 1 - Math.exp(-dt * 7.5);
+    camera.position.lerp(desiredCameraPosition, smooth);
+    camera.lookAt(cameraTarget);
   } else {
     camera.position.lerp(new THREE.Vector3(0,26,34),0.025);camera.lookAt(0,0,0);
   }
