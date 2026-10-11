@@ -1,3 +1,4 @@
+
 import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.161.0/build/three.module.js";
 
 const $ = id => document.getElementById(id);
@@ -6,8 +7,19 @@ const socket = io({ transports: ["websocket", "polling"] });
 let scene, camera, renderer, clock;
 let localPlayer = null, roomCode = null, roomState = null;
 let isPractice = false, jumpVelocity = 0, onGround = true;
-let lastSend = 0, lastToast = "";
+let lastSend = 0;
 let tornadoGroup = null;
+
+let cameraYaw = 0;
+let cameraPitch = 0.25;
+let cameraDragging = false;
+let cameraPointerId = null;
+let lastPointerX = 0;
+let lastPointerY = 0;
+
+const cameraDistance = 10;
+const cameraTarget = new THREE.Vector3();
+const cameraDesired = new THREE.Vector3();
 
 const remotes = new Map();
 const keys = new Set();
@@ -24,7 +36,10 @@ function init3D() {
   scene.fog = new THREE.Fog(0x91c7e8, 55, 145);
 
   camera = new THREE.PerspectiveCamera(
-    68, innerWidth / innerHeight, 0.1, 300
+    68,
+    innerWidth / innerHeight,
+    0.1,
+    300
   );
 
   renderer = new THREE.WebGLRenderer({
@@ -34,11 +49,12 @@ function init3D() {
 
   renderer.setPixelRatio(Math.min(devicePixelRatio || 1, 1.7));
   renderer.setSize(innerWidth, innerHeight);
+  renderer.domElement.style.touchAction = "none";
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   renderer.outputColorSpace = THREE.SRGBColorSpace;
-  world.appendChild(renderer.domElement);
 
+  world.appendChild(renderer.domElement);
   clock = new THREE.Clock();
 
   scene.add(new THREE.HemisphereLight(0xdff4ff, 0x59604b, 2));
@@ -70,57 +86,70 @@ function init3D() {
 
   window.addEventListener("keyup", e => keys.delete(e.code));
 
-  // CREATE ROOM
-  $("createBtn").onclick = () => {
-    if (!socket.connected) {
-      setNotice("السيرفر غير متصل. عاود حدّث الصفحة.");
-      return;
-    }
+  window.addEventListener("blur", () => {
+    keys.clear();
+    resetStick();
+    cameraDragging = false;
+    cameraPointerId = null;
+  });
 
-    setNotice("جاري إنشاء الغرفة...");
-    socket.emit("createRoom", { name: getName() });
-  };
+  // CREATE ROOM
+  if ($("createBtn")) {
+    $("createBtn").onclick = () => {
+      if (!socket.connected) {
+        setNotice("السيرفر غير متصل. عاود حدّث الصفحة.");
+        return;
+      }
+
+      setNotice("جاري إنشاء الغرفة...");
+      socket.emit("createRoom", { name: getName() });
+    };
+  }
 
   // JOIN ROOM
-  $("joinBtn").onclick = () => {
-    const code = $("roomCode").value
-      .trim()
-      .toUpperCase();
+  if ($("joinBtn")) {
+    $("joinBtn").onclick = () => {
+      const code = $("roomCode")?.value.trim().toUpperCase();
 
-    if (!code) {
-      setNotice("دخل كود الغرفة أولاً.");
-      return;
-    }
+      if (!code) {
+        setNotice("دخل كود الغرفة أولاً.");
+        return;
+      }
 
-    if (!socket.connected) {
-      setNotice("السيرفر غير متصل. عاود حدّث الصفحة.");
-      return;
-    }
+      if (!socket.connected) {
+        setNotice("السيرفر غير متصل. عاود حدّث الصفحة.");
+        return;
+      }
 
-    setNotice("جاري الدخول إلى الغرفة...");
+      setNotice("جاري الدخول إلى الغرفة...");
+      socket.emit("joinRoom", {
+        name: getName(),
+        code
+      });
+    };
+  }
 
-    socket.emit("joinRoom", {
-      name: getName(),
-      code: code
+  if ($("soloBtn")) $("soloBtn").onclick = startPractice;
+  if ($("leaveBtn")) $("leaveBtn").onclick = leaveGame;
+
+  if ($("roomCode")) {
+    $("roomCode").addEventListener("input", () => {
+      $("roomCode").value = $("roomCode").value
+        .toUpperCase()
+        .replace(/[^A-Z0-9]/g, "")
+        .slice(0, 5);
     });
-  };
+  }
 
-  $("soloBtn").onclick = startPractice;
-  $("leaveBtn").onclick = leaveGame;
-
-  $("roomCode").addEventListener("input", () => {
-    $("roomCode").value = $("roomCode").value
-      .toUpperCase()
-      .replace(/[^A-Z0-9]/g, "")
-      .slice(0, 5);
-  });
-
-  $("jump").addEventListener("pointerdown", e => {
-    e.preventDefault();
-    jump();
-  });
+  if ($("jump")) {
+    $("jump").addEventListener("pointerdown", e => {
+      e.preventDefault();
+      jump();
+    });
+  }
 
   setupStick();
+  setupCameraDrag();
 }
 
 function mat(color, roughness = 0.9) {
@@ -137,11 +166,8 @@ function box(w, h, d, color, x, y, z, opts = {}) {
   mesh.castShadow = true;
   mesh.receiveShadow = true;
 
-  if (opts.parent) {
-    opts.parent.add(mesh);
-  } else {
-    scene.add(mesh);
-  }
+  if (opts.parent) opts.parent.add(mesh);
+  else scene.add(mesh);
 
   return mesh;
 }
@@ -180,9 +206,7 @@ function buildCity() {
       const wx = x * 18 + ((z % 2) * 2);
       const wz = z * 18;
 
-      if (Math.abs(wx) < 17 && Math.abs(wz) < 17) {
-        continue;
-      }
+      if (Math.abs(wx) < 17 && Math.abs(wz) < 17) continue;
 
       const h = 5 + Math.random() * 13;
       const w = 6 + Math.random() * 5;
@@ -241,9 +265,7 @@ function buildCity() {
     const x = (i % 6) * 13 - 38;
     const z = Math.floor(i / 6) * 22 - 20;
 
-    if (Math.abs(x) < 15 && Math.abs(z) < 15) {
-      continue;
-    }
+    if (Math.abs(x) < 15 && Math.abs(z) < 15) continue;
 
     box(0.65, 2, 0.65, 0x79583d, x, 1, z);
 
@@ -325,6 +347,7 @@ function makeCharacter(color, name) {
   group.add(hair);
 
   const legs = [];
+  const arms = [];
 
   for (const side of [-1, 1]) {
     const leg = new THREE.Mesh(
@@ -345,6 +368,7 @@ function makeCharacter(color, name) {
     arm.position.set(side * 0.62, 1.35, 0);
     arm.castShadow = true;
     group.add(arm);
+    arms.push(arm);
   }
 
   const labelCanvas = document.createElement("canvas");
@@ -352,7 +376,7 @@ function makeCharacter(color, name) {
   labelCanvas.height = 96;
 
   const ctx = labelCanvas.getContext("2d");
-  ctx.fillStyle = "#07111ddd";
+  ctx.fillStyle = "#07111ddc";
   ctx.fillRect(0, 0, 512, 96);
   ctx.fillStyle = "#ffffff";
   ctx.font = "bold 42px sans-serif";
@@ -372,73 +396,126 @@ function makeCharacter(color, name) {
 
   label.position.y = 3;
   group.add(label);
-  group.userData = { legs };
+  group.userData = { legs, arms, label };
 
   return group;
 }
 
 function getName() {
-  return $("playerName").value.trim().slice(0, 16) || "Player";
+  return $("playerName")?.value.trim().slice(0, 16) || "Player";
+}
+
+function setNotice(msg) {
+  const notice = $("notice");
+  if (notice) notice.textContent = msg;
+  else showToast(msg);
+}
+
+function showToast(msg) {
+  const el = $("toast");
+  if (!el) return;
+
+  el.textContent = msg;
+  el.style.display = "block";
+
+  setTimeout(() => {
+    if (el.textContent === msg) el.style.display = "none";
+  }, 3500);
+}
+
+function setHudVisible(visible) {
+  if ($("hud")) $("hud").style.display = visible ? "block" : "none";
+  if ($("lobby")) $("lobby").style.display = visible ? "none" : "";
+}
+
+function setText(id, text) {
+  const el = $(id);
+  if (el) el.textContent = text;
 }
 
 function startPractice() {
   isPractice = true;
   roomCode = "PRACTICE";
+  roomState = { phase: "playing" };
 
-  $("lobby").style.display = "none";
-  $("hud").style.display = "block";
+  setHudVisible(true);
 
   if (!localPlayer) {
     localPlayer = makeCharacter(0xff5b5b, getName());
     scene.add(localPlayer);
-    localPlayer.position.set(0, 0, 0);
   }
 
-  $("codeBadge").textContent = "PRACTICE";
+  localPlayer.position.set(0, 0, 0);
+  jumpVelocity = 0;
+  onGround = true;
 
-  $("statusText").innerHTML =
-    "<strong>Practice mode</strong><br>Join a friend for online multiplayer.";
-
-  showToast("Practice mode: online play requires a room.");
+  setText("codeBadge", "PRACTICE");
+  setText("roomInfo", "PRACTICE");
+  setText("statusText", "Practice mode");
+  showToast("Practice mode started.");
 }
 
 function leaveGame() {
-  if (!isPractice) {
-    socket.emit("leaveRoom");
-  }
+  if (!isPractice && roomCode) socket.emit("leaveRoom");
 
   isPractice = false;
   roomCode = null;
   roomState = null;
+  jumpVelocity = 0;
+  onGround = true;
 
-  $("hud").style.display = "none";
-  $("lobby").style.display = "grid";
+  setHudVisible(false);
 
   if (localPlayer) {
     scene.remove(localPlayer);
+    disposeCharacter(localPlayer);
     localPlayer = null;
   }
 
   for (const [id, obj] of remotes) {
     scene.remove(obj.mesh);
+    disposeCharacter(obj.mesh);
     remotes.delete(id);
   }
+
+  removeTornado();
+}
+
+function disposeCharacter(character) {
+  character.traverse(obj => {
+    if (obj.geometry) obj.geometry.dispose();
+
+    if (obj.material) {
+      const materials = Array.isArray(obj.material)
+        ? obj.material
+        : [obj.material];
+
+      materials.forEach(m => {
+        if (m.map) m.map.dispose();
+        m.dispose();
+      });
+    }
+  });
 }
 
 function joined(code) {
   isPractice = false;
   roomCode = code;
 
-  $("lobby").style.display = "none";
-  $("hud").style.display = "block";
-  $("codeBadge").textContent = code;
+  setHudVisible(true);
+  setText("codeBadge", code);
+  setText("roomInfo", "ROOM " + code);
 
   if (!localPlayer) {
     localPlayer = makeCharacter(0xff5b5b, getName());
     scene.add(localPlayer);
   }
 
-  showToast("Room " + code + " connected. Share this code with your friend.");
+  localPlayer.position.set(0, 0, 0);
+  jumpVelocity = 0;
+  onGround = true;
+
+  showToast("Room " + code + " connected.");
 }
 
 // SOCKET EVENTS
@@ -457,7 +534,8 @@ socket.on("roomCreated", data => {
   }
 
   joined(data.code);
-  $("roomCode").value = data.code;
+
+  if ($("roomCode")) $("roomCode").value = data.code;
 });
 
 socket.on("roomJoined", data => {
@@ -474,14 +552,18 @@ socket.on("errorMessage", msg => {
 });
 
 socket.on("roomState", state => {
+  if (!state) return;
+
   roomState = state;
 
   if (state.code) {
     roomCode = state.code;
-    $("codeBadge").textContent = state.code;
+    setText("codeBadge", state.code);
+    setText("roomInfo", "ROOM " + state.code);
   }
 
-  updateRemotePlayers(state.players || []);
+  const players = state.players || [];
+  updateRemotePlayers(players);
 
   const seconds = Math.ceil((state.remainingMs || 0) / 1000);
 
@@ -492,11 +574,9 @@ socket.on("roomState", state => {
     state.phase === "results" ? "Round over" :
     "Connected";
 
-  $("statusText").innerHTML =
-    "<strong>" + escapeHtml(phaseText) + "</strong><br>" +
-    escapeHtml(state.message || "");
+  setText("statusText", phaseText + "\n" + (state.message || ""));
 
-  renderPlayers(state.players || []);
+  renderPlayers(players);
 
   if (state.disaster && state.disaster.active) {
     updateTornado(state.disaster);
@@ -506,8 +586,9 @@ socket.on("roomState", state => {
 
   if (
     state.phase === "lobby" &&
-    (state.players || []).length >= 2 &&
-    !document.getElementById("startRoundBtn")
+    players.length >= 2 &&
+    $("hud") &&
+    !$("startRoundBtn")
   ) {
     const b = document.createElement("button");
     b.id = "startRoundBtn";
@@ -516,16 +597,14 @@ socket.on("roomState", state => {
 
     b.style.cssText =
       "position:absolute;left:50%;top:calc(50% + 55px);" +
-      "transform:translateX(-50%);pointer-events:auto;z-index:4";
+      "transform:translateX(-50%);pointer-events:auto;z-index:10";
 
     b.onclick = () => socket.emit("startGame");
-
     $("hud").appendChild(b);
   }
 
   if (state.phase !== "lobby") {
-    const b = $("startRoundBtn");
-    if (b) b.remove();
+    $("startRoundBtn")?.remove();
   }
 });
 
@@ -539,36 +618,19 @@ function escapeHtml(s) {
   }[c]));
 }
 
-function setNotice(msg) {
-  const notice = $("notice");
-  if (notice) notice.textContent = msg;
-}
-
-function showToast(msg) {
-  const el = $("toast");
+function renderPlayers(players) {
+  const el = $("players") || $("playerList");
   if (!el) return;
 
-  el.textContent = msg;
-  el.style.display = "block";
-  lastToast = msg;
-
-  setTimeout(() => {
-    if (el.textContent === msg) {
-      el.style.display = "none";
-    }
-  }, 3500);
-}
-
-function renderPlayers(players) {
-  $("players").innerHTML = players.map(p =>
-    `<div class="player-row">
-      <span class="dot" style="background:${p.color}"></span>
-      <span>${escapeHtml(p.name)}${p.id === socket.id ? " (you)" : ""}</span>
+  el.innerHTML = players.map(p => `
+    <div class="player-row">
+      <span class="dot" style="background:${escapeHtml(p.color || "#fff")}"></span>
+      <span>${escapeHtml(p.name || "Player")}${p.id === socket.id ? " (you)" : ""}</span>
       <span style="margin-left:auto;color:${p.alive ? "#6ee7b7" : "#ff7777"}">
         ${p.alive ? "●" : "×"}
       </span>
-    </div>`
-  ).join("");
+    </div>
+  `).join("");
 }
 
 function updateRemotePlayers(players) {
@@ -579,36 +641,43 @@ function updateRemotePlayers(players) {
   for (const [id, obj] of remotes) {
     if (!ids.has(id)) {
       scene.remove(obj.mesh);
+      disposeCharacter(obj.mesh);
       remotes.delete(id);
     }
   }
 
   for (const p of players) {
     if (p.id === socket.id) {
-      if (localPlayer) {
-        localPlayer.position.x = p.x;
-        localPlayer.position.z = p.z;
-      }
+      // لا نبدلوش موقع الشخصية المحلية من تحديثات الشبكة باستمرار.
       continue;
     }
 
     let obj = remotes.get(p.id);
 
     if (!obj) {
-      const mesh = makeCharacter(p.color, p.name);
+      const mesh = makeCharacter(p.color || 0x5599ff, p.name);
       scene.add(mesh);
 
       obj = {
         mesh,
-        target: new THREE.Vector3(p.x, 0, p.z)
+        target: new THREE.Vector3(
+          Number(p.x) || 0,
+          0,
+          Number(p.z) || 0
+        )
       };
 
       remotes.set(p.id, obj);
     }
 
-    obj.target.set(p.x, 0, p.z);
+    obj.target.set(
+      Number(p.x) || 0,
+      0,
+      Number(p.z) || 0
+    );
+
     obj.mesh.userData.alive = p.alive;
-    obj.mesh.visible = true;
+    obj.mesh.visible = p.alive !== false;
   }
 }
 
@@ -649,69 +718,172 @@ function updateTornado(d) {
     scene.add(tornadoGroup);
   }
 
-  tornadoGroup.position.set(d.x, 0, d.z);
+  tornadoGroup.position.set(
+    Number(d.x) || 0,
+    0,
+    Number(d.z) || 0
+  );
 }
 
 function removeTornado() {
   if (tornadoGroup) {
     scene.remove(tornadoGroup);
+
+    tornadoGroup.traverse(obj => {
+      if (obj.geometry) obj.geometry.dispose();
+
+      if (obj.material) {
+        const materials = Array.isArray(obj.material)
+          ? obj.material
+          : [obj.material];
+
+        materials.forEach(m => m.dispose());
+      }
+    });
+
     tornadoGroup = null;
   }
 }
 
 // MOBILE JOYSTICK
+let stickPointerId = null;
+
 function setupStick() {
   const stick = $("stick");
   const knob = $("knob");
 
-  let active = false;
-  let origin = null;
+  if (!stick || !knob) return;
 
-  const reset = () => {
-    active = false;
-    origin = null;
-    move.x = 0;
-    move.z = 0;
-    knob.style.left = "34px";
-    knob.style.top = "34px";
-  };
+  stick.style.touchAction = "none";
+  knob.style.touchAction = "none";
 
   stick.addEventListener("pointerdown", e => {
-    active = true;
-    origin = { x: e.clientX, y: e.clientY };
-    stick.setPointerCapture(e.pointerId);
+    e.preventDefault();
+
+    stickPointerId = e.pointerId;
+
+    const rect = stick.getBoundingClientRect();
+    const originX = rect.left + rect.width / 2;
+    const originY = rect.top + rect.height / 2;
+
+    stick.dataset.originX = originX;
+    stick.dataset.originY = originY;
+
+    try {
+      stick.setPointerCapture(e.pointerId);
+    } catch {}
+
+    updateStick(e);
   });
 
   stick.addEventListener("pointermove", e => {
-    if (!active || !origin) return;
-
-    let dx = e.clientX - origin.x;
-    let dy = e.clientY - origin.y;
-
-    const len = Math.hypot(dx, dy);
-    const max = 34;
-
-    if (len > max) {
-      dx = dx / len * max;
-      dy = dy / len * max;
-    }
-
-    knob.style.left = (34 + dx) + "px";
-    knob.style.top = (34 + dy) + "px";
-
-    move.x = dx / max;
-    move.z = dy / max;
+    if (e.pointerId !== stickPointerId) return;
+    updateStick(e);
   });
 
-  stick.addEventListener("pointerup", reset);
-  stick.addEventListener("pointercancel", reset);
+  stick.addEventListener("pointerup", e => {
+    if (e.pointerId !== stickPointerId) return;
+    resetStick();
+  });
+
+  stick.addEventListener("pointercancel", resetStick);
+  stick.addEventListener("lostpointercapture", resetStick);
+
+  function updateStick(e) {
+    const rect = stick.getBoundingClientRect();
+    const originX = Number(stick.dataset.originX);
+    const originY = Number(stick.dataset.originY);
+
+    let dx = e.clientX - originX;
+    let dy = e.clientY - originY;
+
+    const radius = Math.max(20, rect.width / 2 - 25);
+    const length = Math.hypot(dx, dy);
+
+    if (length > radius) {
+      dx = dx / length * radius;
+      dy = dy / length * radius;
+    }
+
+    const centerX = rect.width / 2;
+    const centerY = rect.height / 2;
+
+    knob.style.left = (centerX + dx - knob.offsetWidth / 2) + "px";
+    knob.style.top = (centerY + dy - knob.offsetHeight / 2) + "px";
+
+    move.x = dx / radius;
+    move.z = dy / radius;
+  }
+}
+
+function resetStick() {
+  stickPointerId = null;
+  move.x = 0;
+  move.z = 0;
+
+  const stick = $("stick");
+  const knob = $("knob");
+
+  if (stick && knob) {
+    knob.style.left = ((stick.clientWidth - knob.offsetWidth) / 2) + "px";
+    knob.style.top = ((stick.clientHeight - knob.offsetHeight) / 2) + "px";
+  }
+}
+
+// CAMERA DRAG
+function setupCameraDrag() {
+  const canvas = renderer.domElement;
+
+  canvas.addEventListener("pointerdown", e => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+
+    // الجهة اليسرى مخصصة للـ joystick
+    if (e.clientX < innerWidth * 0.42) return;
+
+    cameraDragging = true;
+    cameraPointerId = e.pointerId;
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
+
+    try {
+      canvas.setPointerCapture(e.pointerId);
+    } catch {}
+  });
+
+  canvas.addEventListener("pointermove", e => {
+    if (!cameraDragging || e.pointerId !== cameraPointerId) return;
+
+    const dx = e.clientX - lastPointerX;
+    const dy = e.clientY - lastPointerY;
+
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
+
+    cameraYaw -= dx * 0.006;
+    cameraPitch = THREE.MathUtils.clamp(
+      cameraPitch + dy * 0.004,
+      -0.15,
+      0.9
+    );
+  });
+
+  const stop = e => {
+    if (e.pointerId !== cameraPointerId) return;
+
+    cameraDragging = false;
+    cameraPointerId = null;
+  };
+
+  canvas.addEventListener("pointerup", stop);
+  canvas.addEventListener("pointercancel", stop);
+  canvas.addEventListener("lostpointercapture", stop);
 }
 
 function jump() {
-  if (onGround) {
-    jumpVelocity = 7.5;
-    onGround = false;
-  }
+  if (!localPlayer || !onGround) return;
+
+  jumpVelocity = 7.5;
+  onGround = false;
 }
 
 // GAME LOOP
@@ -721,42 +893,60 @@ function animate() {
   const dt = Math.min(clock.getDelta(), 0.05);
 
   if (localPlayer) {
-    let mx = move.x;
-    let mz = move.z;
+    let inputX = move.x;
+    let inputZ = move.z;
 
-    if (keys.has("KeyA") || keys.has("ArrowLeft")) mx -= 1;
-    if (keys.has("KeyD") || keys.has("ArrowRight")) mx += 1;
-    if (keys.has("KeyW") || keys.has("ArrowUp")) mz -= 1;
-    if (keys.has("KeyS") || keys.has("ArrowDown")) mz += 1;
+    if (keys.has("KeyA") || keys.has("ArrowLeft")) inputX -= 1;
+    if (keys.has("KeyD") || keys.has("ArrowRight")) inputX += 1;
+    if (keys.has("KeyW") || keys.has("ArrowUp")) inputZ -= 1;
+    if (keys.has("KeyS") || keys.has("ArrowDown")) inputZ += 1;
 
     if (keys.has("Space")) jump();
 
-    const len = Math.hypot(mx, mz);
+    const inputLength = Math.hypot(inputX, inputZ);
 
-    if (len > 1) {
-      mx /= len;
-      mz /= len;
+    if (inputLength > 1) {
+      inputX /= inputLength;
+      inputZ /= inputLength;
     }
 
-    if (!roomState || roomState.phase === "playing" || isPractice) {
+    const canMove =
+      isPractice ||
+      !roomState ||
+      roomState.phase === "playing";
+
+    if (canMove) {
+      // اتجاه الحركة تابع لاتجاه الكاميرا
+      const forwardX = -Math.sin(cameraYaw);
+      const forwardZ = -Math.cos(cameraYaw);
+
+      const rightX = Math.cos(cameraYaw);
+      const rightZ = -Math.sin(cameraYaw);
+
+      const worldX = rightX * inputX - forwardX * inputZ;
+      const worldZ = rightZ * inputX - forwardZ * inputZ;
+
       localPlayer.position.x = THREE.MathUtils.clamp(
-        localPlayer.position.x + mx * 8 * dt,
-        -arena, arena
+        localPlayer.position.x + worldX * 8 * dt,
+        -arena,
+        arena
       );
 
       localPlayer.position.z = THREE.MathUtils.clamp(
-        localPlayer.position.z + mz * 8 * dt,
-        -arena, arena
+        localPlayer.position.z + worldZ * 8 * dt,
+        -arena,
+        arena
       );
 
-      if (len > 0.1) {
-        localPlayer.rotation.y = Math.atan2(mx, mz);
+      if (inputLength > 0.1) {
+        localPlayer.rotation.y = Math.atan2(worldX, worldZ);
       }
 
+      // Gravity and jumping
       jumpVelocity -= 18 * dt;
       localPlayer.position.y += jumpVelocity * dt;
 
-      if (localPlayer.position.y < 0) {
+      if (localPlayer.position.y <= 0) {
         localPlayer.position.y = 0;
         jumpVelocity = 0;
         onGround = true;
@@ -765,7 +955,7 @@ function animate() {
       const t = clock.elapsedTime;
 
       localPlayer.userData.legs.forEach((leg, i) => {
-        leg.rotation.x = len > 0.1
+        leg.rotation.x = inputLength > 0.1
           ? Math.sin(t * 11 + i * Math.PI) * 0.55
           : 0;
       });
@@ -782,37 +972,42 @@ function animate() {
       }
     }
 
-    camera.position.lerp(
-      new THREE.Vector3(
-        localPlayer.position.x,
-        localPlayer.position.y + 7.5,
-        localPlayer.position.z + 11
-      ),
-      0.12
+    // Third-person camera
+    const horizontalDistance = cameraDistance * Math.cos(cameraPitch);
+    const verticalDistance = cameraDistance * Math.sin(cameraPitch);
+
+    cameraDesired.set(
+      localPlayer.position.x + Math.sin(cameraYaw) * horizontalDistance,
+      localPlayer.position.y + 2.3 + verticalDistance,
+      localPlayer.position.z + Math.cos(cameraYaw) * horizontalDistance
     );
 
-    camera.lookAt(
+    camera.position.lerp(
+      cameraDesired,
+      1 - Math.exp(-8 * dt)
+    );
+
+    cameraTarget.set(
       localPlayer.position.x,
-      localPlayer.position.y + 1.1,
+      localPlayer.position.y + 1.35,
       localPlayer.position.z
     );
+
+    camera.lookAt(cameraTarget);
   } else {
     camera.position.lerp(new THREE.Vector3(0, 26, 34), 0.025);
     camera.lookAt(0, 0, 0);
   }
 
+  // Smooth remote player movement
   for (const obj of remotes.values()) {
     obj.mesh.position.lerp(obj.target, 0.22);
 
-    obj.mesh.rotation.y =
-      Math.atan2(
-        obj.target.x - obj.mesh.position.x,
-        obj.target.z - obj.mesh.position.z
-      ) || obj.mesh.rotation.y;
-
     if (obj.mesh.userData.legs) {
-      obj.mesh.userData.legs.forEach(leg => {
-        leg.rotation.x = Math.sin(clock.elapsedTime * 8) * 0.12;
+      obj.mesh.userData.legs.forEach((leg, i) => {
+        leg.rotation.x = Math.sin(
+          clock.elapsedTime * 8 + i * Math.PI
+        ) * 0.12;
       });
     }
   }
@@ -820,8 +1015,8 @@ function animate() {
   if (tornadoGroup) {
     tornadoGroup.rotation.y += dt * 1.7;
 
-    tornadoGroup.children.slice(1).forEach((r, i) => {
-      r.rotation.z += dt * (i % 2 ? 1 : -1) * 1.5;
+    tornadoGroup.children.slice(1).forEach((ring, i) => {
+      ring.rotation.z += dt * (i % 2 ? 1 : -1) * 1.5;
     });
   }
 
@@ -829,6 +1024,8 @@ function animate() {
 }
 
 function resize() {
+  if (!camera || !renderer) return;
+
   camera.aspect = innerWidth / innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(innerWidth, innerHeight);
