@@ -19,7 +19,7 @@
       margin: 0;
       overflow: hidden;
       background: #101827;
-      color: white;
+      color: #fff;
       font-family: Arial, sans-serif;
       overscroll-behavior: none;
     }
@@ -39,6 +39,11 @@
       touch-action: manipulation;
     }
 
+    button:disabled {
+      opacity: .55;
+      cursor: not-allowed;
+    }
+
     #game {
       position: absolute;
       inset: 0;
@@ -53,7 +58,7 @@
       touch-action: none;
     }
 
-    /* Lobby */
+    /* Main lobby */
     #lobby {
       position: absolute;
       inset: 0;
@@ -61,56 +66,169 @@
       display: flex;
       align-items: center;
       justify-content: center;
+      overflow-y: auto;
       padding: 20px;
-      background: rgba(8, 14, 27, 0.88);
-      backdrop-filter: blur(8px);
+      background: rgba(5, 10, 22, .76);
+      backdrop-filter: blur(9px);
     }
 
     #lobby.hidden {
-      display: none;
+      display: none !important;
     }
 
-    #lobby > * {
-      max-width: 100%;
+    .panel {
+      width: min(100%, 430px);
+      padding: 28px;
+      border: 1px solid rgba(255,255,255,.13);
+      border-radius: 22px;
+      background: rgba(14, 23, 41, .96);
+      box-shadow: 0 22px 70px rgba(0,0,0,.4);
     }
 
-    #lobby .panel,
-    #lobby .card,
-    #lobby form {
-      max-width: 420px;
+    .brand {
+      margin: 0 0 8px;
+      font-size: clamp(28px, 7vw, 40px);
+      font-weight: 900;
+      letter-spacing: -1.5px;
+    }
+
+    .brand span {
+      color: #4b8cff;
+    }
+
+    .subtitle {
+      margin: 0 0 22px;
+      color: #aebbd0;
+      line-height: 1.5;
+      font-size: 14px;
+    }
+
+    .field-label {
+      display: block;
+      margin: 14px 0 6px;
+      color: #dce5f4;
+      font-size: 13px;
+      font-weight: 700;
     }
 
     #lobby input {
+      display: block;
       width: 100%;
       min-height: 46px;
-      padding: 12px;
-      margin: 6px 0;
-      border: 1px solid #3b4963;
-      border-radius: 12px;
-      background: #172238;
+      padding: 12px 14px;
+      margin: 0;
+      border: 1px solid #35445e;
+      border-radius: 11px;
+      background: #101a2d;
       color: white;
       outline: none;
     }
 
     #lobby input:focus {
       border-color: #438dff;
+      box-shadow: 0 0 0 3px rgba(67,141,255,.13);
     }
 
-    #lobby button {
-      min-height: 44px;
-      padding: 10px 16px;
+    #lobby input::placeholder {
+      color: #75849c;
+    }
+
+    .button-stack {
+      display: grid;
+      grid-template-columns: 1fr;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    .lobby-button {
+      width: 100%;
+      min-height: 47px;
+      padding: 12px 16px;
       border: 0;
-      border-radius: 12px;
-      background: #2769ee;
-      font-weight: 700;
+      border-radius: 11px;
+      background: #2869ed;
+      font-weight: 800;
+      transition: filter .15s, transform .15s;
     }
 
-    /* HUD */
+    .lobby-button:hover {
+      filter: brightness(1.12);
+    }
+
+    .lobby-button:active {
+      transform: scale(.985);
+    }
+
+    .lobby-button.secondary {
+      border: 1px solid #34435d;
+      background: #1a2740;
+    }
+
+    .lobby-button.practice {
+      border: 1px solid rgba(61, 199, 145, .4);
+      background: rgba(23, 117, 87, .25);
+    }
+
+    .section-divider {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin: 18px 0 2px;
+      color: #8190a8;
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.3px;
+    }
+
+    .section-divider::before,
+    .section-divider::after {
+      content: "";
+      height: 1px;
+      flex: 1;
+      background: #2c3950;
+    }
+
+    #statusText {
+      min-height: 18px;
+      margin: 14px 0 0;
+      color: #a9bbd6;
+      font-size: 12px;
+      line-height: 1.5;
+      white-space: pre-line;
+      overflow-wrap: anywhere;
+    }
+
+    #notice {
+      display: none;
+      margin-top: 12px;
+      padding: 10px 12px;
+      border: 1px solid rgba(255, 104, 104, .35);
+      border-radius: 10px;
+      background: rgba(170, 40, 50, .15);
+      color: #ffc0c0;
+      font-size: 12px;
+      line-height: 1.4;
+      overflow-wrap: anywhere;
+    }
+
+    #notice.visible {
+      display: block;
+    }
+
+    #roomCode {
+      text-transform: uppercase;
+    }
+
+    /* In-game interface */
     #hud {
       position: absolute;
       inset: 0;
       z-index: 5;
       pointer-events: none;
+    }
+
+    #hud.hidden {
+      display: none !important;
     }
 
     #topbar {
@@ -129,24 +247,38 @@
       pointer-events: auto;
     }
 
+    #roomInfo {
+      max-width: 70%;
+      padding: 10px 13px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      background: rgba(12,20,36,.82);
+      font-size: 12px;
+      overflow-wrap: anywhere;
+    }
+
     #topbar button {
       min-height: 40px;
-      padding: 8px 12px;
+      padding: 8px 13px;
       border: 1px solid rgba(255,255,255,.2);
       border-radius: 12px;
-      background: rgba(12, 20, 36, .82);
+      background: rgba(12,20,36,.88);
     }
 
     #playerList {
       position: absolute;
       top: 68px;
       right: 12px;
-      max-width: 180px;
+      width: max-content;
+      max-width: 190px;
+      max-height: 40%;
+      overflow-y: auto;
       padding: 10px;
       border: 1px solid rgba(255,255,255,.15);
       border-radius: 12px;
-      background: rgba(12, 20, 36, .72);
+      background: rgba(12,20,36,.76);
       font-size: 12px;
+      overflow-wrap: anywhere;
     }
 
     #crosshair {
@@ -167,9 +299,10 @@
       max-width: 90%;
       padding: 10px 16px;
       border-radius: 12px;
-      background: rgba(8, 14, 27, .82);
+      background: rgba(8,14,27,.85);
       text-align: center;
       transform: translateX(-50%);
+      overflow-wrap: anywhere;
     }
 
     #bottom {
@@ -188,8 +321,8 @@
       max-width: 45%;
       padding: 8px 10px;
       border-radius: 10px;
-      background: rgba(8, 14, 27, .55);
-      color: rgba(255,255,255,.8);
+      background: rgba(8,14,27,.6);
+      color: rgba(255,255,255,.85);
       font-size: 11px;
     }
 
@@ -209,7 +342,7 @@
       flex: 0 0 116px;
       border: 2px solid rgba(255,255,255,.38);
       border-radius: 50%;
-      background: rgba(15, 24, 42, .38);
+      background: rgba(15,24,42,.42);
       box-shadow: inset 0 0 18px rgba(0,0,0,.2);
       pointer-events: auto;
       touch-action: none;
@@ -223,9 +356,9 @@
       top: 50%;
       width: 38px;
       height: 38px;
-      border: 1px solid rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.15);
       border-radius: 50%;
-      transform: translate(-50%, -50%);
+      transform: translate(-50%,-50%);
     }
 
     #knob {
@@ -236,7 +369,7 @@
       height: 44px;
       border: 2px solid rgba(255,255,255,.8);
       border-radius: 50%;
-      background: rgba(80, 140, 255, .8);
+      background: rgba(65,130,255,.88);
       box-shadow: 0 3px 12px rgba(0,0,0,.35);
       pointer-events: none;
     }
@@ -251,7 +384,7 @@
       padding: 0;
       border: 2px solid rgba(255,255,255,.65);
       border-radius: 50%;
-      background: rgba(39, 105, 238, .72);
+      background: rgba(39,105,238,.8);
       box-shadow: 0 5px 18px rgba(0,0,0,.3);
       pointer-events: auto;
       touch-action: none;
@@ -260,7 +393,7 @@
 
     #jump:active {
       transform: scale(.93);
-      background: rgba(65, 135, 255, .95);
+      background: rgba(65,135,255,.95);
     }
 
     #jump svg {
@@ -275,6 +408,10 @@
     }
 
     @media (max-width: 650px) {
+      .panel {
+        padding: 23px 20px;
+      }
+
       #mobileControls {
         display: flex;
       }
@@ -292,7 +429,7 @@
         top: 66px;
         right: 8px;
         bottom: 150px;
-        overflow: auto;
+        max-height: none;
         max-width: 145px;
         font-size: 11px;
       }
@@ -353,27 +490,69 @@
 <body>
   <div id="game"></div>
 
-  <div id="lobby">
-    <!-- Keep your existing lobby contents here if your original
-         index.html already has a room creation/joining interface. -->
-    <div class="panel">
-      <h1>DISASTER CITY</h1>
-      <p>Enter the city and survive the disaster.</p>
-      <p style="font-size:13px;color:#b9c5d8">
-        Use your existing room creation interface in this panel.
-      </p>
-    </div>
-  </div>
+  <main id="lobby">
+    <section class="panel">
+      <h1 class="brand">DISASTER <span>CITY</span></h1>
+      <p class="subtitle">Enter the city. Survive the disaster. Play with your friends.</p>
 
-  <div id="hud">
+      <label class="field-label" for="playerName">PLAYER NAME</label>
+      <input
+        id="playerName"
+        type="text"
+        maxlength="20"
+        placeholder="Enter your name"
+        autocomplete="nickname"
+      >
+
+      <div class="button-stack">
+        <button id="createBtn" class="lobby-button" type="button">
+          CREATE ROOM
+        </button>
+      </div>
+
+      <div class="section-divider">OR JOIN FRIENDS</div>
+
+      <label class="field-label" for="roomCode">ROOM CODE</label>
+      <input
+        id="roomCode"
+        type="text"
+        maxlength="12"
+        placeholder="Enter room code"
+        autocomplete="off"
+        spellcheck="false"
+      >
+
+      <div class="button-stack">
+        <button id="joinBtn" class="lobby-button secondary" type="button">
+          JOIN ROOM
+        </button>
+
+        <button id="soloBtn" class="lobby-button practice" type="button">
+          PLAY SOLO
+        </button>
+      </div>
+
+      <p id="statusText" role="status" aria-live="polite">
+        Connecting to server...
+      </p>
+
+      <div id="notice" role="alert"></div>
+
+      <div id="players" aria-live="polite" style="margin-top:12px;font-size:12px;color:#aebbd0"></div>
+    </section>
+  </main>
+
+  <div id="hud" class="hidden">
     <div id="topbar">
-      <div id="roomInfo"></div>
-      <button id="leaveBtn" type="button" aria-label="Leave game" title="Leave game">↩</button>
+      <div id="roomInfo">DISASTER CITY</div>
+      <button id="leaveBtn" type="button" aria-label="Leave game" title="Leave game">
+        LEAVE
+      </button>
     </div>
 
     <div id="playerList"></div>
     <div id="crosshair"></div>
-    <div id="toast"></div>
+    <div id="toast" role="status"></div>
 
     <div id="bottom">
       <div id="help">WASD to move · Space to jump · Drag to look</div>
