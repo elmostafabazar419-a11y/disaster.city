@@ -43,7 +43,7 @@ function init3D() {
   buildCity();
   setupVehicleControls();
   window.addEventListener("resize", resize);
-  window.addEventListener("keydown", e => { keys.add(e.code); if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault(); });
+  window.addEventListener("keydown", e => { keys.add(e.code); if (["Space","ArrowUp","ArrowDown","ArrowLeft","ArrowRight"].includes(e.code)) e.preventDefault(); if(e.code==="KeyE" && !activeVehicle){ const near=vehicles.filter(v=>!v.occupied).sort((a,b)=>distanceToPlayer(a)-distanceToPlayer(b))[0]; if(near && distanceToPlayer(near)<13) enterVehicle(near.type); } if(e.code==="Escape" && activeVehicle) exitVehicle(); });
   window.addEventListener("keyup", e => keys.delete(e.code));
   window.addEventListener("keydown", e => { if(e.code === "KeyE" && localPlayer && !activeVehicle){ const nearest=vehicles.slice().sort((a,b)=>distanceToPlayer(a)-distanceToPlayer(b))[0]; if(nearest && distanceToPlayer(nearest)<13) enterVehicle(nearest.type); } if(e.code === "Escape" && activeVehicle) exitVehicle(); });
   $("createBtn").onclick = () => {
@@ -188,8 +188,12 @@ function createVehicle(type,x,z,rotation=0){
   const g=new THREE.Group();
   const isPolice=type==="police";
   const paint=isPolice?0xf3f5f7:0xf2c928;
-  box(3.5,0.62,1.55,paint,0,0,0,{parent:g});
-  box(1.75,0.72,1.25,isPolice?0x172333:0xe5e9ec,0,0.63,-0.05,{parent:g});
+  // Chunky, toy-like Roblox-inspired chassis with clear silhouette.
+  box(3.8,0.72,1.72,paint,0,0.48,0,{parent:g});
+  box(2.1,0.26,1.55,isPolice?0xf4f6f8:0xf2c928,0,-0.02,0,{parent:g});
+  box(1.95,0.78,1.34,isPolice?0x172333:0xe5e9ec,-0.18,1.03,-0.03,{parent:g});
+  box(0.12,0.72,1.40,isPolice?0x172333:0xe5e9ec,0.82,1.03,-0.03,{parent:g});
+  box(0.12,0.72,1.40,isPolice?0x172333:0xe5e9ec,-1.18,1.03,-0.03,{parent:g});
   box(0.9,0.08,1.42,isPolice?0x172333:0x252b31,-0.98,0.18,0,{parent:g});
   box(0.85,0.08,1.42,isPolice?0x172333:0x252b31,1.0,0.18,0,{parent:g});
   // Windows on both sides and windshield.
@@ -199,8 +203,16 @@ function createVehicle(type,x,z,rotation=0){
   box(0.06,0.44,0.78,0x8fd1e6,0.89,0.72,0,{parent:g});
   // Wheels.
   for(const wx of [-1.08,1.08])for(const wz of [-0.83,0.83]){
-    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.34,0.34,0.22,12),mat(0x17191d));
-    wheel.rotation.z=Math.PI/2;wheel.position.set(wx,0.03,wz);wheel.castShadow=true;g.add(wheel);
+    const wheel=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.28,10),mat(0x17191d));
+    wheel.rotation.z=Math.PI/2;wheel.position.set(wx,0.34,wz);wheel.castShadow=true;g.add(wheel);
+  }
+  // Thick bumpers and side panels give the cars a recognizable toy-game look.
+  box(0.22,0.22,1.82,0x242b33,1.98,0.34,0,{parent:g});
+  box(0.22,0.22,1.82,0x242b33,-1.98,0.34,0,{parent:g});
+  if(isPolice){
+    box(0.12,0.26,1.76,0x2878db,0.05,0.53,0.88,{parent:g});
+    box(0.12,0.26,1.76,0x2878db,0.05,0.53,-0.88,{parent:g});
+    box(0.08,0.25,1.74,0xffffff,0.05,0.78,0.89,{parent:g});
   }
   // Headlights and rear lights.
   for(const side of [-1,1]){
@@ -227,8 +239,8 @@ function addTinyLabel(parent,text,x,y,z,color){
 }
 function setupVehicleControls(){
   vehicleHud=document.createElement("div");vehicleHud.id="vehicleControls";
-  vehicleHud.style.cssText="position:absolute;right:16px;bottom:18px;z-index:8;display:none;gap:8px;flex-wrap:wrap;max-width:240px;pointer-events:auto";
-  const makeBtn=(id,label,fn)=>{const b=document.createElement("button");b.id=id;b.textContent=label;b.style.cssText="border:1px solid #ffffff55;border-radius:12px;padding:11px 14px;background:#101d2de8;color:#fff;font-weight:800;font-size:12px;box-shadow:0 5px 18px #0005";b.onclick=fn;vehicleHud.appendChild(b);return b;};
+  vehicleHud.style.cssText="position:fixed;right:12px;bottom:138px;z-index:30;display:none;gap:8px;flex-wrap:wrap;width:min(260px,48vw);pointer-events:auto;justify-content:flex-end";
+  const makeBtn=(id,label,fn)=>{const b=document.createElement("button");b.id=id;b.textContent=label;b.style.cssText="border:1px solid #ffffff66;border-radius:14px;padding:12px 13px;min-height:44px;background:#101d2df2;color:#fff;font-weight:900;font-size:11px;box-shadow:0 5px 18px #0005;touch-action:manipulation";b.onclick=fn;vehicleHud.appendChild(b);return b;};
   makeBtn("taxiBtn","DRIVE TAXI",()=>enterVehicle("taxi"));
   makeBtn("policeBtn","DRIVE POLICE",()=>enterVehicle("police"));
   const exitBtn=makeBtn("exitCarBtn","EXIT CAR",exitVehicle);
@@ -285,7 +297,7 @@ function startPractice(){
   isPractice=true; roomCode="PRACTICE"; $("lobby").style.display="none"; $("hud").style.display="block";
   if(vehicleHud) vehicleHud.style.display="flex";
   if(!localPlayer){localPlayer=makeCharacter(0xff5b5b,getName());scene.add(localPlayer);localPlayer.position.set(0,0,0);}
-  $("codeBadge").textContent="PRACTICE";
+  $("codeBadge").textContent="PRACTICE"; if(vehicleHud) vehicleHud.style.display="flex";
   $("statusText").innerHTML="<strong>Practice mode</strong><br>Join a friend for online multiplayer.";
   showToast("Practice mode: online play requires a room.");
 }
@@ -360,8 +372,9 @@ function removeTornado(){if(tornadoGroup){scene.remove(tornadoGroup);tornadoGrou
 function setupStick(){
   const stick=$("stick"),knob=$("knob");let active=false,origin=null;
   const reset=()=>{active=false;move.x=0;move.z=0;knob.style.left="34px";knob.style.top="34px";};
-  stick.addEventListener("pointerdown",e=>{active=true;origin={x:e.clientX,y:e.clientY};stick.setPointerCapture(e.pointerId);});
-  stick.addEventListener("pointermove",e=>{if(!active||!origin)return;let dx=e.clientX-origin.x,dy=e.clientY-origin.y;const len=Math.hypot(dx,dy),max=34;if(len>max){dx=dx/len*max;dy=dy/len*max;}knob.style.left=(34+dx)+"px";knob.style.top=(34+dy)+"px";move.x=dx/max;move.z=dy/max;});
+  stick.addEventListener("pointerdown",e=>{e.preventDefault();active=true;const r=stick.getBoundingClientRect();origin={x:r.left+r.width/2,y:r.top+r.height/2};if(stick.setPointerCapture)stick.setPointerCapture(e.pointerId);moveStick(e);});
+  function moveStick(e){if(!active||!origin)return;let dx=e.clientX-origin.x,dy=e.clientY-origin.y;const len=Math.hypot(dx,dy),max=34;if(len>max){dx=dx/len*max;dy=dy/len*max;}knob.style.left=(34+dx)+"px";knob.style.top=(34+dy)+"px";move.x=dx/max;move.z=dy/max;}
+  stick.addEventListener("pointermove",moveStick);
   stick.addEventListener("pointerup",reset);stick.addEventListener("pointercancel",reset);
 }
 function jump(){if(onGround){jumpVelocity=7.5;onGround=false;}}
@@ -376,7 +389,7 @@ function animate(){
     if(keys.has("KeyS")||keys.has("ArrowDown"))mz+=1;
     if(keys.has("Space"))jump();
     const len=Math.hypot(mx,mz);if(len>1){mx/=len;mz/=len;}
-    if(!roomState || roomState.phase==="playing" || isPractice){
+    if(!roomState || roomState.phase==="playing" || roomState.phase==="lobby" || roomState.phase==="prep" || isPractice){
       if(activeVehicle){
         // Vehicle steering and acceleration; the same position packets keep existing rooms compatible.
         const forwardInput=-mz;
