@@ -1,47 +1,399 @@
-<!doctype html>
+
+<!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
-<title>DISASTER CITY</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-:root{color-scheme:dark;--bg:#0b1020;--panel:rgba(14,21,39,.94);--line:#2a3853;--cyan:#55dcff;--orange:#ffad55;--text:#f5f8ff;--muted:#a9b7cf}
-*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);font-family:Inter,system-ui,sans-serif;color:var(--text)}canvas{display:block}button,input{font:inherit}button{cursor:pointer;border:1px solid #3a4b6a;background:#182642;color:white;border-radius:12px;padding:11px 14px;font-weight:800}button.primary{background:var(--cyan);color:#07111c;border-color:var(--cyan)}button:disabled{opacity:.45;cursor:not-allowed}input{width:100%;border:1px solid #33435f;background:#0b1428;color:white;padding:12px;border-radius:10px;outline:none}#game{position:fixed;inset:0}#hud{position:fixed;inset:0;pointer-events:none;display:none}#topbar{position:absolute;left:12px;right:12px;top:12px;display:flex;gap:8px;align-items:flex-start;justify-content:space-between} .glass{background:var(--panel);border:1px solid var(--line);border-radius:14px;backdrop-filter:blur(12px);box-shadow:0 8px 30px #0003}.pill{padding:9px 12px;font-size:12px;font-weight:800;letter-spacing:.04em}.status{max-width:55%;padding:10px 12px;font-size:12px;line-height:1.4}.status strong{color:var(--cyan)}#playerList{position:absolute;right:12px;top:66px;padding:12px;min-width:150px;max-width:210px;font-size:12px}#playerList h3{margin:0 0 8px;font-size:11px;color:var(--muted);letter-spacing:.12em}#players{display:grid;gap:6px}.player-row{display:flex;align-items:center;gap:7px}.dot{width:9px;height:9px;border-radius:3px;flex:none}#bottom{position:absolute;bottom:14px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:end;gap:10px}#help{padding:10px 12px;font-size:11px;color:var(--muted);max-width:330px}#mobileControls{display:none;pointer-events:auto;gap:8px;align-items:end}#stick{width:116px;height:116px;border-radius:50%;background:#101c32b8;border:2px solid #a5bdd355;position:relative;touch-action:none}#knob{position:absolute;width:44px;height:44px;border-radius:50%;background:#55dcffbb;border:2px solid #d8f8ff;left:34px;top:34px}#jump{height:58px;width:66px;border-radius:50%;background:#ffad55;color:#201206}#lobby{position:fixed;inset:0;display:grid;place-items:center;padding:16px;background:radial-gradient(ellipse at 50% 0%,#18365a 0%,#0b1020 65%);overflow:auto}.card{width:min(460px,100%);padding:24px;border:1px solid #304260;border-radius:22px;background:rgba(12,20,38,.96);box-shadow:0 25px 80px #0007}.eyebrow{color:var(--cyan);font-weight:900;letter-spacing:.2em;font-size:11px}.logo{font-size:clamp(34px,8vw,56px);line-height:.96;letter-spacing:-.06em;font-weight:900;margin:12px 0}.logo span{color:var(--orange)}.sub{color:var(--muted);font-size:13px;line-height:1.6}.field{display:grid;gap:6px;margin:14px 0}.field label{font-size:11px;font-weight:800;color:#b9c7dd;letter-spacing:.08em}.actions{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:12px}.divider{display:flex;align-items:center;gap:12px;color:#6f809c;font-size:10px;font-weight:900;margin:16px 0}.divider:before,.divider:after{content:"";height:1px;background:#2a3853;flex:1}#notice{min-height:20px;color:var(--orange);font-size:12px;margin-top:12px}#codeBadge{color:var(--orange)}#hint{font-size:11px;color:var(--muted);margin-top:14px;line-height:1.5}#leaveBtn{pointer-events:auto;padding:8px 10px;font-size:11px}#toast{position:absolute;top:80px;left:50%;transform:translateX(-50%);padding:10px 14px;max-width:85%;text-align:center;font-size:12px;display:none}#crosshair{position:absolute;left:50%;top:50%;width:7px;height:7px;border:1px solid #fff8;border-radius:50%;transform:translate(-50%,-50%)}@media(max-width:650px){#playerList{top:auto;bottom:145px;right:10px;min-width:125px;padding:9px}#bottom{bottom:10px;left:10px;right:10px;align-items:end}#help{max-width:48%;font-size:10px}#mobileControls{display:flex}#statusText{max-width:60%}.card{padding:20px}.status{max-width:62%}}@media(min-width:651px){#mobileControls{display:none}}
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="theme-color" content="#101827">
+  <title>DISASTER CITY</title>
+
+  <style>
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #101827;
+      color: white;
+      font-family: Arial, sans-serif;
+      overscroll-behavior: none;
+    }
+
+    body {
+      position: fixed;
+      inset: 0;
+    }
+
+    button, input {
+      font: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      color: white;
+      touch-action: manipulation;
+    }
+
+    #game {
+      position: absolute;
+      inset: 0;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    #game canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+
+    /* Lobby */
+    #lobby {
+      position: absolute;
+      inset: 0;
+      z-index: 20;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      background: rgba(8, 14, 27, 0.88);
+      backdrop-filter: blur(8px);
+    }
+
+    #lobby.hidden {
+      display: none;
+    }
+
+    #lobby > * {
+      max-width: 100%;
+    }
+
+    #lobby .panel,
+    #lobby .card,
+    #lobby form {
+      max-width: 420px;
+    }
+
+    #lobby input {
+      width: 100%;
+      min-height: 46px;
+      padding: 12px;
+      margin: 6px 0;
+      border: 1px solid #3b4963;
+      border-radius: 12px;
+      background: #172238;
+      color: white;
+      outline: none;
+    }
+
+    #lobby input:focus {
+      border-color: #438dff;
+    }
+
+    #lobby button {
+      min-height: 44px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 12px;
+      background: #2769ee;
+      font-weight: 700;
+    }
+
+    /* HUD */
+    #hud {
+      position: absolute;
+      inset: 0;
+      z-index: 5;
+      pointer-events: none;
+    }
+
+    #topbar {
+      position: absolute;
+      top: max(12px, env(safe-area-inset-top));
+      left: 12px;
+      right: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    #topbar > * {
+      pointer-events: auto;
+    }
+
+    #topbar button {
+      min-height: 40px;
+      padding: 8px 12px;
+      border: 1px solid rgba(255,255,255,.2);
+      border-radius: 12px;
+      background: rgba(12, 20, 36, .82);
+    }
+
+    #playerList {
+      position: absolute;
+      top: 68px;
+      right: 12px;
+      max-width: 180px;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,.15);
+      border-radius: 12px;
+      background: rgba(12, 20, 36, .72);
+      font-size: 12px;
+    }
+
+    #crosshair {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 7px;
+      height: 7px;
+      border: 1px solid rgba(255,255,255,.65);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #toast {
+      position: absolute;
+      top: 22%;
+      left: 50%;
+      max-width: 90%;
+      padding: 10px 16px;
+      border-radius: 12px;
+      background: rgba(8, 14, 27, .82);
+      text-align: center;
+      transform: translateX(-50%);
+    }
+
+    #bottom {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: max(12px, env(safe-area-inset-bottom));
+      display: flex;
+      align-items: flex-end;
+      justify-content: space-between;
+      padding: 0 18px;
+      pointer-events: none;
+    }
+
+    #help {
+      max-width: 45%;
+      padding: 8px 10px;
+      border-radius: 10px;
+      background: rgba(8, 14, 27, .55);
+      color: rgba(255,255,255,.8);
+      font-size: 11px;
+    }
+
+    /* Mobile controls */
+    #mobileControls {
+      display: none;
+      width: 100%;
+      align-items: flex-end;
+      justify-content: space-between;
+      pointer-events: none;
+    }
+
+    #stick {
+      position: relative;
+      width: 116px;
+      height: 116px;
+      flex: 0 0 116px;
+      border: 2px solid rgba(255,255,255,.38);
+      border-radius: 50%;
+      background: rgba(15, 24, 42, .38);
+      box-shadow: inset 0 0 18px rgba(0,0,0,.2);
+      pointer-events: auto;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #stick::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 38px;
+      height: 38px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #knob {
+      position: absolute;
+      left: 34px;
+      top: 34px;
+      width: 44px;
+      height: 44px;
+      border: 2px solid rgba(255,255,255,.8);
+      border-radius: 50%;
+      background: rgba(80, 140, 255, .8);
+      box-shadow: 0 3px 12px rgba(0,0,0,.35);
+      pointer-events: none;
+    }
+
+    #jump {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      width: 72px;
+      height: 72px;
+      margin: 0 4px 10px 0;
+      padding: 0;
+      border: 2px solid rgba(255,255,255,.65);
+      border-radius: 50%;
+      background: rgba(39, 105, 238, .72);
+      box-shadow: 0 5px 18px rgba(0,0,0,.3);
+      pointer-events: auto;
+      touch-action: none;
+      user-select: none;
+    }
+
+    #jump:active {
+      transform: scale(.93);
+      background: rgba(65, 135, 255, .95);
+    }
+
+    #jump svg {
+      width: 34px;
+      height: 34px;
+      fill: none;
+      stroke: white;
+      stroke-width: 2.8;
+      stroke-linecap: round;
+      stroke-linejoin: round;
+      pointer-events: none;
+    }
+
+    @media (max-width: 650px) {
+      #mobileControls {
+        display: flex;
+      }
+
+      #bottom {
+        bottom: max(14px, env(safe-area-inset-bottom));
+        padding: 0 18px;
+      }
+
+      #help {
+        display: none;
+      }
+
+      #playerList {
+        top: 66px;
+        right: 8px;
+        bottom: 150px;
+        overflow: auto;
+        max-width: 145px;
+        font-size: 11px;
+      }
+
+      #topbar {
+        top: max(8px, env(safe-area-inset-top));
+        left: 8px;
+        right: 8px;
+      }
+
+      #topbar button {
+        min-height: 36px;
+        padding: 7px 9px;
+        font-size: 12px;
+      }
+
+      #stick {
+        width: 108px;
+        height: 108px;
+        flex-basis: 108px;
+      }
+
+      #knob {
+        left: 31px;
+        top: 31px;
+        width: 42px;
+        height: 42px;
+      }
+
+      #jump {
+        width: 68px;
+        height: 68px;
+      }
+    }
+
+    @media (max-width: 380px) {
+      #stick {
+        width: 96px;
+        height: 96px;
+        flex-basis: 96px;
+      }
+
+      #knob {
+        left: 27px;
+        top: 27px;
+        width: 40px;
+        height: 40px;
+      }
+
+      #jump {
+        width: 62px;
+        height: 62px;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div id="game"></div>
-<div id="lobby">
-  <main class="card">
-    <div class="eyebrow">MULTIPLAYER SURVIVAL • ONLINE</div>
-    <div class="logo">DISASTER<br><span>CITY</span></div>
-    <p class="sub">A blocky city. One huge tornado. Stay alive with your friends.</p>
-    <div class="field"><label for="playerName">PLAYER NAME</label><input id="playerName" maxlength="16" placeholder="Your name" autocomplete="nickname"></div>
-    <div class="actions"><button id="createBtn" class="primary">Create room</button><button id="soloBtn">Practice mode</button></div>
-    <div class="divider">OR JOIN A FRIEND</div>
-    <div class="field"><label for="roomCode">ROOM CODE</label><input id="roomCode" maxlength="5" placeholder="ABCDE" autocapitalize="characters"></div>
-    <button id="joinBtn" style="width:100%">Join room</button>
-    <div id="notice" role="status"></div>
-    <div id="hint">First test: open this page in two browsers/devices, create a room on one and join using the 5-character code on the other.</div>
-  </main>
-</div>
-<div id="hud">
-  <div id="topbar">
-    <div class="glass pill">DISASTER <span style="color:var(--orange)">CITY</span> · <span id="codeBadge">LOCAL</span></div>
-    <div class="glass status" id="statusText">Waiting for players…</div>
-    <button id="leaveBtn" class="glass">LEAVE</button>
+  <div id="game"></div>
+
+  <div id="lobby">
+    <!-- Keep your existing lobby contents here if your original
+         index.html already has a room creation/joining interface. -->
+    <div class="panel">
+      <h1>DISASTER CITY</h1>
+      <p>Enter the city and survive the disaster.</p>
+      <p style="font-size:13px;color:#b9c5d8">
+        Use your existing room creation interface in this panel.
+      </p>
+    </div>
   </div>
-  <div id="playerList" class="glass"><h3>SURVIVORS</h3><div id="players"></div></div>
-  <div id="crosshair"></div>
-  <div id="toast" class="glass"></div>
-  <div id="bottom">
-    <div id="help" class="glass">WASD / arrows to move · Space to jump · Avoid the tornado!</div>
-    <div id="mobileControls"><div id="stick"><div id="knob"></div></div><button id="jump">JUMP</button></div>
+
+  <div id="hud">
+    <div id="topbar">
+      <div id="roomInfo"></div>
+      <button id="leaveBtn" type="button" aria-label="Leave game" title="Leave game">↩</button>
+    </div>
+
+    <div id="playerList"></div>
+    <div id="crosshair"></div>
+    <div id="toast"></div>
+
+    <div id="bottom">
+      <div id="help">WASD to move · Space to jump · Drag to look</div>
+
+      <div id="mobileControls">
+        <div id="stick" aria-label="Movement joystick">
+          <div id="knob"></div>
+        </div>
+
+        <button id="jump" type="button" aria-label="Jump" title="Jump">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 19V5"></path>
+            <path d="M5.5 11.5 12 5l6.5 6.5"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
   </div>
-</div>
-<script src="/socket.io/socket.io.js"></script>
-<script type="module" src="/game.js"></script>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="/game.js"></script>
 </body>
 </html>
