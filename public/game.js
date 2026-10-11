@@ -293,19 +293,50 @@ function addSign(text,x,y,z,color) {
   mesh.position.set(x,y,z);scene.add(mesh);
 }
 function makeCharacter(color, name) {
+  // Blocky, polished Roblox-inspired avatar built from simple 3D parts.
   const group = new THREE.Group();
-  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9,1.1,0.48), mat(color));
-  body.position.y=1.25; body.castShadow=true;group.add(body);
-  const head = new THREE.Mesh(new THREE.BoxGeometry(0.68,0.68,0.68),mat(0xffd2a3));
-  head.position.y=2.15;head.castShadow=true;group.add(head);
-  const hair = new THREE.Mesh(new THREE.BoxGeometry(0.7,0.2,0.7),mat(0x3b2a24));hair.position.y=2.55;group.add(hair);
+  const shirtColor = color || 0x2878ff;
+  const skin = mat(0xffc99f);
+  const shirt = mat(shirtColor);
+  const pants = mat(0x24334d);
+  const shoes = mat(0x171b24);
+  const dark = mat(0x28201d);
+  const white = mat(0xffffff);
+  const eyeMat = new THREE.MeshStandardMaterial({color:0x171717, roughness:0.65});
+  const addPart=(geometry, material, x,y,z, cast=true)=>{
+    const m=new THREE.Mesh(geometry,material);m.position.set(x,y,z);m.castShadow=cast;m.receiveShadow=true;group.add(m);return m;
+  };
+  // Legs and chunky sneakers.
   const legs=[];
   for(const side of [-1,1]){
-    const leg=new THREE.Mesh(new THREE.BoxGeometry(0.32,0.78,0.38),mat(0x273b5b));
-    leg.position.set(side*0.24,0.39,0);leg.castShadow=true;group.add(leg);legs.push(leg);
-    const arm=new THREE.Mesh(new THREE.BoxGeometry(0.28,0.82,0.32),mat(color));
-    arm.position.set(side*0.62,1.35,0);arm.castShadow=true;group.add(arm);
+    const leg=addPart(new THREE.BoxGeometry(0.34,0.72,0.39),pants,side*0.23,0.48,0);
+    legs.push(leg);
+    addPart(new THREE.BoxGeometry(0.38,0.2,0.53),shoes,side*0.23,0.12,-0.055);
+    addPart(new THREE.BoxGeometry(0.30,0.045,0.025),white,side*0.23,0.16,-0.325,false);
   }
+  // Torso, collar, and a simple jacket stripe for a more finished look.
+  addPart(new THREE.BoxGeometry(0.94,0.92,0.48),shirt,0,1.28,0);
+  addPart(new THREE.BoxGeometry(0.34,0.12,0.50),mat(0xf4f6fa),0,1.69,-0.012,false);
+  addPart(new THREE.BoxGeometry(0.10,0.56,0.025),mat(0xf4f6fa),0,1.28,-0.253,false);
+  // Arms with skin hands; arms remain blocky to fit the game style.
+  for(const side of [-1,1]){
+    addPart(new THREE.BoxGeometry(0.29,0.76,0.34),shirt,side*0.63,1.30,0);
+    addPart(new THREE.BoxGeometry(0.27,0.23,0.30),skin,side*0.63,0.81,0);
+    // small sleeve cuff
+    addPart(new THREE.BoxGeometry(0.30,0.08,0.35),mat(0xf4f6fa),side*0.63,1.00,0,false);
+  }
+  // Squared head, hair cap, and fringe.
+  addPart(new THREE.BoxGeometry(0.70,0.70,0.68),skin,0,2.13,0);
+  addPart(new THREE.BoxGeometry(0.74,0.22,0.72),dark,0,2.52,0.015);
+  addPart(new THREE.BoxGeometry(0.72,0.18,0.25),dark,0,2.42,-0.245);
+  // Friendly face placed on the front (-Z).
+  addPart(new THREE.BoxGeometry(0.085,0.10,0.025),eyeMat,-0.16,2.18,-0.353,false);
+  addPart(new THREE.BoxGeometry(0.085,0.10,0.025),eyeMat,0.16,2.18,-0.353,false);
+  addPart(new THREE.BoxGeometry(0.22,0.045,0.025),mat(0x8d3f35),0,1.99,-0.354,false);
+  // Small shoulder badge.
+  addPart(new THREE.BoxGeometry(0.17,0.17,0.035),mat(0xffd34d),-0.29,1.48,-0.265,false);
+  addPart(new THREE.BoxGeometry(0.08,0.08,0.04),mat(0x17395c),-0.29,1.48,-0.288,false);
+
   const labelCanvas=document.createElement("canvas");labelCanvas.width=512;labelCanvas.height=96;
   const ctx=labelCanvas.getContext("2d");ctx.fillStyle="#07111ddd";ctx.fillRect(0,0,512,96);ctx.fillStyle="#ffffff";ctx.font="bold 42px sans-serif";ctx.textAlign="center";ctx.textBaseline="middle";ctx.fillText(String(name||"Player").slice(0,16),256,48);
   const label=new THREE.Mesh(new THREE.PlaneGeometry(2.4,0.45),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(labelCanvas),transparent:true,side:THREE.DoubleSide,depthWrite:false}));
